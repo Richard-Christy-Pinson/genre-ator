@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'user/components/title.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sound_clone.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+</head>
+<body>
+{% include 'user/components/top_navbar.html' %}
+
+<div class="container">
+    {% include 'user/components/sidebar.html' %}
+
+    <main class="content">
+
+         <main class="dashboard-content">
+            <h2>Admin Dashboard</h2>
+
+            <div class="dashboard-grid">
+                <div class="stat-box total-uploads">
+                    <h3>Total Uploads</h3>
+                    <p id="totalUploads">{{ total_uploads }}</p>
+                </div>
+
+                <div class="stat-box total-renderings">
+                    <h3>Total Renderings</h3>
+                    <p id="totalRenderings">{{ total_renderings }}</p>
+                </div>
+
+                <div class="stat-box most-used-genre">
+                    <h3>Most Used Genre</h3>
+                    <p id="mostUsedGenre">{{ most_used_genre }}</p>
+                    <small style="color: white">Used {{ genre_count }} times</small>
+                </div>
+            </div>
+        </main>
+
+    </main>
+</div>
+
+</body>
+
+<script src="{{ url_for('static', filename='scripts/login_logout.js') }}"></script>
+
+</html>

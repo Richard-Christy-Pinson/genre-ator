@@ -1,0 +1,123 @@
+<div class="audio-container">
+    <!-- Left Side (Upload and Controls) -->
+    <div class="left-side">
+        <!-- Upload Button -->
+        <input type="file" id="audioFile" accept="audio/wav">
+
+        <!-- Song Metadata Inputs -->
+        <div class="metadata-inputs">
+            <input type="text" id="songTitle" placeholder="Song Title"
+                   value="{{ song_data.title if song_data else '' }}">
+            <input type="text" id="artistName" placeholder="Artist Name"
+                   value="{{ song_data.artist if song_data else '' }}">
+        </div>
+
+        <!-- Hidden fields to store original and rendered URLs -->
+        <input type="hidden" id="originalFile"
+               value="{{ url_for('static', filename='audios/original/' + song_data.original) if song_data and song_data.original else '' }}">
+        <input type="hidden" id="renderedFile"
+               value="{{ url_for('static', filename='audios/rendered/' + song_data.rendered) if song_data and song_data.rendered else '' }}">
+
+        <!-- Audio Player Controls -->
+        <audio id="audioPlayer" controls></audio>
+
+        <div class="process-section">
+            {#            <button id="findGenreBtn">Find genre</button>#}
+            {% include 'user/components/findgenre.html' %}
+            <!-- Display Genre if Editing -->
+            <div class="identified-genre" id="genreIdentified">
+                <span id="genre-name">{{ ("GENRE: " + song_data.genre) if song_data else '' }}</span>
+                <span id="genre-id" style="display: none">{{ song_data.genre_id if song_data else '' }}</span>
+                <span id="music-id" style="display: none">{{ song_data.music_id if song_data else '' }}</span>
+            </div>
+            {% include 'user/components/generateBtn.html' %}
+        </div>
+    </div>
+
+    <!-- Right Side (Visualizer) -->
+    <div class="right-side" style="display: flex; flex-direction: column">
+        <canvas id="visualizer"></canvas>
+        <div class="visualizer-controls">
+            <button id="lineVisualizerBtn">Line Visualizer</button>
+            <button id="barVisualizerBtn">Bar Visualizer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    // JavaScript to send the file to your API remains unchanged
+    document.addEventListener("DOMContentLoaded", function () {
+        const audioPlayer = document.getElementById("audioPlayer");
+        const originalFile = document.getElementById("originalFile").value;
+
+        // If original file exists, set it as the audio source
+        if (originalFile) {
+            audioPlayer.src = originalFile;
+            const genre_id = document.getElementById('genre-id').innerHTML;
+            // enable the generate audio button
+            if (genre_id) {
+                document.getElementById('generateAudioBtn').style.pointerEvents = 'auto';
+            }
+        }
+
+        const audioFileInput = document.getElementById("audioFile");
+        const findGenreBtn = document.getElementById("findGenreBtn");
+
+        let selectedFile = null;
+
+        // Handle MP3/WAV file selection
+        audioFileInput.addEventListener("change", function (event) {
+            selectedFile = event.target.files[0];
+        });
+
+        // findGenreBtn button click event
+        findGenreBtn.addEventListener("click", function () {
+            if (!selectedFile) {
+                alert("Please upload an audio file first.");
+                return;
+            }
+
+            // Check if song title and artist name are provided
+            const songTitle = document.getElementById("songTitle").value.trim();
+            const artistName = document.getElementById("artistName").value.trim();
+            if (!songTitle || !artistName) {
+                alert("Please enter both the song title and artist name.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("audio", selectedFile);
+            formData.append("songTitle", songTitle);
+            formData.append("artistName", artistName);
+
+
+            // display let him cook
+            document.getElementById('loader').style.display = 'flex';
+            fetch("upload_wav", {  // Replace with your actual API endpoint
+                method: "POST",
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // remove let him cook
+                    document.getElementById('loader').style.display = 'none';
+                    if (data['genre'] === "error") {
+                        alert("Error: Failed to identify genre.");
+                        document.getElementById('genreIdentified').innerHTML = "Error: Could not identify genre.";
+                    } else {
+                        // Genre identification success
+                        document.getElementById('genre-name').innerHTML = "GENRE: " + data['genre'];
+                        document.getElementById('genre-id').innerHTML = data['genre-id'];
+                        document.getElementById('music-id').innerHTML = data['music-id'];
+                        document.getElementById('generateAudioBtn').style.pointerEvents = 'auto';
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Failed to process the file. " + error);
+                });
+        });
+    });
+
+</script>

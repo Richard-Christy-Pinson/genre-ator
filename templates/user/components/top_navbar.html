@@ -1,0 +1,21 @@
+<header>
+    <div class="logo">
+        <img src="{{ url_for('static', filename='img/genreator_logo.png') }}" alt="Logo">
+        <h1>Genre-Ator</h1>
+    </div>
+
+    {% if session.username != 'admin' and current_route == 'user_actions.index' %}
+        <input id='search_music' type="text" placeholder="Search music..." oninput="handleMusicSearch()">
+    {% endif %}
+
+    <!-- User Profile Dropdown -->
+    <div class="user-profile">
+        <img src="{{ url_for('static', filename= 'img/profile_pics/' + session.profile_pic ) }}" alt="User Avatar" id="profile-icon">
+        <span id="username">{{ session.username }}</span>
+        <div class="dropdown-menu" id="dropdown-menu">
+            <a href="/profile">Profile</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
+
+</header>

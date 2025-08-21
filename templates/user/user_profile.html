@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'user/components/title.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sound_clone.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/user_profile.css') }}">
+</head>
+<body>
+<div>
+    {% include 'user/components/top_navbar.html' %}
+    <div class="container">
+        {% include 'user/components/sidebar.html' %}
+
+
+        <div class="profile-container">
+            <h2>Edit Profile</h2>
+            <div class="profile-pic">
+                <img id="profileImage" src="{{ url_for('static', filename='img/profile_pics/' + user.profile_pic) }}"
+                     alt="Profile Picture">
+                <input type="file" id="profilePicInput" accept=".jpeg, .jpg, .png">
+                <p id="fileError" style="color: red; display: none;">Only JPEG, JPG, or PNG files are allowed.</p>
+            </div>
+
+            <label>Username</label>
+            <input type="text" id="usernameInput" value="{{ user.username }}">
+
+            <label>Email</label>
+            <input type="email" id="email" value="{{ user.email }}">
+
+            <label>Password</label><br><br>
+            <div class="password-container">
+                <input type="password" id="password" value="{{ user.password }}">
+                <span id="togglePassword" class="eye-icon">👁️</span>
+            </div>
+
+            <button id="saveProfile">Save Changes</button>
+        </div>
+
+
+    </div>
+</div>
+
+<script>
+    document.getElementById("saveProfile").addEventListener("click", async () => {
+        const formData = new FormData();
+        formData.append("u_id", "{{ user.u_id }}");
+        formData.append("username", document.getElementById("usernameInput").value);
+        formData.append("email", document.getElementById("email").value);
+        formData.append("password", document.getElementById("password").value);
+
+        const profilePicInput = document.getElementById("profilePicInput");
+        if (profilePicInput.files.length > 0) {
+            formData.append("profile_pic", profilePicInput.files[0]);
+        }
+        const response = await fetch("/update_profile", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+        alert(data.message);
+        location.reload();
+    });
+
+
+    document.getElementById("profilePicInput").addEventListener("change", function () {
+        const file = this.files[0];
+        if (file) {
+            const fileType = file.type;
+            const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+
+            if (!validTypes.includes(fileType)) {
+                document.getElementById("fileError").style.display = "block";
+                this.value = ""; // Clear invalid file
+            } else {
+                document.getElementById("fileError").style.display = "none";
+            }
+        }
+    });
+
+    document.getElementById("togglePassword").addEventListener("click", function () {
+        const passwordInput = document.getElementById("password");
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            this.textContent = "🙈"; // Change icon when revealing password
+        } else {
+            passwordInput.type = "password";
+            this.textContent = "👁️"; // Change icon back when hiding password
+        }
+    });
+
+</script>
+
+</body>

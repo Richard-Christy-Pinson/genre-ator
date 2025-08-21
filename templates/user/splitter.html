@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'user/components/title.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sound_clone.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/studio.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dropdown_splitter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/download_btn.css') }}">
+</head>
+<body>
+{% include 'user/components/lethimcook.html' %}
+<div>
+    {% include 'user/components/top_navbar.html' %}
+    <div class="container">
+        {% include 'user/components/sidebar.html' %}
+        <div style="display: flex; flex-direction: column; width: 100%;">
+
+            <div class="audio-container">
+                <!-- Left Side (Upload and Controls) -->
+                <div class="left-side">
+                    <!-- Upload Button -->
+                    <input type="file" id="audioFile" accept="audio/wav/mp3">
+
+
+                    <!-- Hidden fields to store original and rendered URLs -->
+                    <input type="hidden" id="originalFile"
+                           value="{{ url_for('static', filename='audios/original/' + song_data.original) if song_data and song_data.original else '' }}">
+                    <input type="hidden" id="renderedFile"
+                           value="{{ url_for('static', filename='audios/rendered/' + song_data.rendered) if song_data and song_data.rendered else '' }}">
+
+                    <!-- Audio Player Controls -->
+                    <audio id="audioPlayer" controls></audio>
+
+                    <div class="process-section" style="display: flex; flex-direction: row; width: 100%">
+                        <label for="audio-type">Extract:</label>
+                        <select id="audio-type" name="audio-type">
+                            <option value="Vocals">Vocals</option>
+                            <option value="Drums">Drums</option>
+                            <option value="Bass">Bass</option>
+                            <option value="Others">Others</option>
+                        </select>
+
+                        {% include 'user/components/extract_btn.html' %}
+                    </div>
+                </div>
+
+                <!-- Right Side (Visualizer) -->
+                <div class="right-side" style="display: flex; flex-direction: column">
+                    <canvas id="visualizer"></canvas>
+                    <div class="visualizer-controls">
+                        <button id="lineVisualizerBtn">Line Visualizer</button>
+                        <button id="barVisualizerBtn">Bar Visualizer</button>
+                    </div>
+                </div>
+            </div>
+
+            {% include 'user/rendered_audio.html' %}
+
+        </div>
+
+    </div>
+</div>
+
+</body>
+
+<script src="{{ url_for('static', filename='scripts/login_logout.js') }}"></script>
+
+<script>
+    {#----------ORIGINAL SONG EQ VISUALIZER------------#}
+    document.addEventListener("DOMContentLoaded", function () {
+        const audioFileInput = document.getElementById("audioFile");
+        const audioPlayer = document.getElementById("audioPlayer");
+        const canvas = document.getElementById("visualizer");
+        const canvasCtx = canvas.getContext("2d");
+
+        canvas.width = 800;  // Increased width for better resolution
+        canvas.height = 200; // Increased height to make the visualizer taller
+
+        let audioCtx, analyser, source;
+        let currentVisualizer = 'line'; // Default visualizer
+
+        // If an original file exists, load it and setup the visualizer
+        const originalFile = document.getElementById("originalFile").value;
+        if (originalFile) {
+            audioPlayer.src = originalFile;
+            audioPlayer.addEventListener("loadeddata", setupAudioVisualizer);
+        }
+
+        // Handle MP3 file selection
+        audioFileInput.addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const objectURL = URL.createObjectURL(file);
+                audioPlayer.src = objectURL;
+                setupAudioVisualizer();
+            }
+        });
+
+        // Button event listeners for switching visualizers
+        document.getElementById("lineVisualizerBtn").addEventListener("click", function () {
+            currentVisualizer = 'line';
+            visualize();  // Redraw the selected visualizer
+        });
+
+        document.getElementById("barVisualizerBtn").addEventListener("click", function () {
+            currentVisualizer = 'bar';
+            visualize();  // Redraw the selected visualizer
+        });
+
+        function setupAudioVisualizer() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;  // High FFT for more data points
+                analyser.smoothingTimeConstant = 0.95;  // Smoothing effect for less jitter
+                analyser.minDecibels = -85;  // Min decibels for more control over range
+                analyser.maxDecibels = 10; // Max decibels for cleaner spectrum
+
+                source = audioCtx.createMediaElementSource(audioPlayer);
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            }
+
+            visualize();
+        }
+
+        function visualize() {
+            requestAnimationFrame(visualize);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            canvasCtx.fillStyle = "black";
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (currentVisualizer === 'line') {
+                visualizeLine(dataArray, bufferLength);
+            } else if (currentVisualizer === 'bar') {
+                visualizeBar(dataArray, bufferLength);
+            }
+        }
+
+        // Line visualizer function
+        function visualizeLine(dataArray, bufferLength) {
+            const lineWidth = 2;
+            let x = 0;
+            const step = canvas.width / bufferLength;
+
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(0, canvas.height - dataArray[0]);
+
+            // Map the data to draw the line across the canvas
+            for (let i = 1; i < bufferLength; i++) {
+                const value = dataArray[i];
+                const y = canvas.height - value;
+                x += step;
+                canvasCtx.lineTo(x, y);
+            }
+
+            // Assign a gradient color for the line
+            const gradient = canvasCtx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, "rgb(250,0,0)"); // Red color
+            gradient.addColorStop(1, "rgb(255,213,0)"); // Yellow color
+            canvasCtx.strokeStyle = gradient;
+            canvasCtx.lineWidth = lineWidth;
+            canvasCtx.stroke();
+        }
+
+// Bar visualizer function
+        function visualizeBar(dataArray, bufferLength) {
+            const barWidth = (canvas.width / bufferLength) * 2.5;
+            let x = 0;
+
+            // Create a gradient color for the bars (same as the line visualizer)
+            const gradient = canvasCtx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, "rgb(250,0,0)"); // Red color
+            gradient.addColorStop(1, "rgb(255,213,0)"); // Yellow color
+
+            // Create a bar graph style visualization
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = dataArray[i];
+
+                // Use the gradient for the bar color
+                canvasCtx.fillStyle = gradient;
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+    });
+    {#----------ORIGINAL SONG EQ VISUALIZER------------#}
+
+</script>
+
+
+</html>

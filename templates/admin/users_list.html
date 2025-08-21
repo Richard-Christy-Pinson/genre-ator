@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'user/components/title.html' %}
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet"
+          href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sound_clone.css') }}">
+</head>
+<body>
+
+{% include 'user/components/top_navbar.html' %}
+
+<div class="container">
+    {% include 'user/components/sidebar.html' %}
+
+    <main class="content">
+        <h2>User List</h2>
+        <table id="usersTable" class="display"
+               style="color: white; background-color: #232323; border-radius: 0.6rem; padding: 1rem">
+            <thead>
+            <tr>
+                <th>Profile Picture</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Status</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for user in users %}
+                <tr>
+                    <td>
+                        <img src="{{ url_for('static', filename='img/profile_pics/' + user.profile_pic) }}"
+                             alt="Profile Pic" width="50" height="50">
+                    </td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        <button class="status-toggle" style="padding: 0.5rem; cursor:pointer; background-color: #c16109;
+                                  border-radius: 0.4rem; border: none; color: white"
+                                data-user-id="{{ user.u_id }}" data-status="{{ user.status }}">
+                            {% if user.status == 1 %}
+                                Active
+                            {% else %}
+                                Inactive
+                            {% endif %}
+                        </button>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+    </main>
+</div>
+
+<!-- jQuery & DataTables JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+
+<script>
+    $(document).ready(function () {
+        $('#usersTable').DataTable();
+
+        $(".status-toggle").click(function () {
+            let button = $(this);
+            let userId = button.data("user-id");
+            let currentStatus = button.data("status");
+            let newStatus = currentStatus === 1 ? 0 : 1;
+            let confirmationMessage = newStatus === 1
+                ? "Are you sure you want to activate this user?"
+                : "Are you sure you want to deactivate this user?";
+
+            if (confirm(confirmationMessage)) {
+                fetch("/admin/update_user_status", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({user_id: userId, status: newStatus})
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            button.text(newStatus === 1 ? "Active" : "Inactive");
+                            button.data("status", newStatus);
+                        } else {
+                            alert("Failed to update status.");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        alert("Something went wrong.");
+                    });
+            }
+        });
+    });
+</script>
+
+
+<script src="{{ url_for('static', filename='scripts/login_logout.js') }}"></script>
+
+</body>
+</html>

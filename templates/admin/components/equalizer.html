@@ -1,0 +1,202 @@
+<div class="equalizer-controls">
+    <label for="genre-select" class="genre-label">Select Genre:</label>
+    <select id="genre-select" class="genre-dropdown" onchange="updateEqualizerValues()">
+        {% for eq in eq_values %}
+            <option value="{{ eq['genre'] }}">{{ eq['genre'] }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="equalizer" id="equalizer">
+    <!-- Knobs will be dynamically generated -->
+</div>
+
+<div class="button-container">
+    <button id="save-btn" class="orange-button" onclick="saveEQValues()">Save</button>
+    <button id="reset-btn" class="orange-button" onclick="location.href='{{ url_for('admin_actions.eq_presets') }}'">
+        Reset to Default
+    </button>
+</div>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #1a1a1a;
+        color: #fff;
+    }
+
+    .equalizer-controls {
+        margin: 20px;
+        text-align: center;
+
+    }
+
+    .genre-label {
+        font-size: 18px;
+        font-weight: bold;
+        color: #ff9f33;
+    }
+
+    .genre-dropdown {
+        padding: 8px;
+        font-size: 16px;
+        border-radius: 5px;
+        border: 2px solid #ff7300;
+        background: #262626;
+        color: #ff9f33;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .genre-dropdown:hover {
+        border-color: #ff9f33;
+    }
+
+    .equalizer {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        margin: 30px auto;
+    }
+
+    .knob-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .db-value {
+        font-size: 16px;
+        color: #cc6d21;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+
+    .knob {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 60px;
+        height: 220px;
+        background: linear-gradient(to bottom, #444, #222);
+        border-radius: 10px;
+        writing-mode: vertical-lr;
+        direction: rtl;
+        outline: none;
+        transition: all 0.3s ease;
+    }
+
+    .knob::-webkit-slider-thumb, .knob::-moz-range-thumb {
+        width: 26px;
+        height: 26px;
+        background: #ff7300;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid #ff9f33;
+    }
+
+    .orange-button {
+        background: #d36912;
+        border: none;
+        padding: 12px 20px;
+        font-size: 16px;
+        color: #1a1a1a;
+        cursor: pointer;
+        border-radius: 5px;
+        margin: 5px;
+        transition: background 0.3s ease, transform 0.1s ease-in-out;
+    }
+
+    .orange-button:hover {
+        background: #ff9f33;
+    }
+
+    .orange-button:active {
+        transform: scale(0.95);
+    }
+</style>
+
+<script>
+    const eqValues = {{ eq_values|tojson }};
+
+    const orderedKeys = ['sub_bass', 'bass', 'lower_midrange', 'midrange', 'upper_midrange', 'low_treble', 'treble', 'presence', 'brilliance', 'air'];
+
+    function generateKnobs(selectedGenre) {
+        const equalizer = document.getElementById("equalizer");
+        equalizer.innerHTML = ""; // Clear existing knobs
+
+        const genreData = eqValues.find(g => g.genre === selectedGenre);
+
+        if (!genreData) {
+            console.error("Selected genre not found in data:", selectedGenre);
+            return;
+        }
+
+        orderedKeys.forEach(key => {
+            if (genreData.hasOwnProperty(key)) {
+                equalizer.innerHTML += `
+                    <div class="knob-container">
+                        <span class="db-value" id="${key}_value">${genreData[key]} dB</span>
+                        <input type="range" min="-12" max="12" value="${genreData[key]}" class="knob" id="${key}" oninput="updateValue(this)">
+                        <label>${key.replace('_', ' ')}</label>
+                    </div>
+                `;
+            }
+        });
+    }
+
+    function updateValue(slider) {
+        let valueSpan = document.getElementById(slider.id + "_value");
+        valueSpan.textContent = slider.value + " dB";
+    }
+
+    function updateEqualizerValues() {
+        const selectedGenre = document.getElementById("genre-select").value;
+        generateKnobs(selectedGenre);
+    }
+
+    function saveEQValues() {
+        let selectedGenre = document.getElementById("genre-select").value;
+        let selectedGenreData = eqValues.find(g => g.genre === selectedGenre);
+
+        if (!selectedGenreData) {
+            console.error("Genre data not found:", selectedGenre);
+            return;
+        }
+
+        let values = {};
+        orderedKeys.forEach(key => {
+            if (document.getElementById(key)) {
+                values[key] = document.getElementById(key).value;
+            }
+        });
+
+        // Confirmation box before saving
+        let confirmSave = confirm(`Are you sure you want to save the EQ settings for ${selectedGenre}?`);
+        if (!confirmSave) {
+            return; // Stop execution if user cancels
+        }
+
+        console.log(selectedGenre, values);
+        fetch("/admin/save_eq_preset", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({genre: selectedGenre, values: values})
+        }).then(response => response.json()).then(data => {
+            alert(data.message);
+        }).catch(error => {
+            console.error("Error saving EQ settings:", error);
+        });
+    }
+
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if (eqValues.length > 0) {
+            generateKnobs(eqValues[0].genre); // Default to the first genre
+        }
+    });
+</script>

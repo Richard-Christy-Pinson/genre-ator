@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include 'user/components/title.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sound_clone.css') }}">
+</head>
+
+<style></style>
+
+<body>
+{% include 'user/components/top_navbar.html' %}
+
+<div class="container">
+    {% include 'user/components/sidebar.html' %}
+
+    <main class="content">
+        {% for song in songs %}
+            <div class="song">
+                <div class="song-info">
+                    <h2 style="color: #ffd06c; overflow-x: hidden"><span
+                            class="song-headings">TITLE:</span> {{ song['title'] }}</h2>
+                    <p style="color: #ffd06c;"><span class="song-headings">ARTIST:</span> {{ song['artist'] }}</p>
+                </div>
+
+                <div class="original-preview">
+                    <div class="song-info">
+                        <h4 class="song-headings">Uploaded Audio: </h4>
+                    </div>
+                    <audio controls class="song-preview">
+                        <source src="{{ url_for('static', filename='audios/original/' + song['original']) }}"
+                                type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+
+                <div class="rendered-preview">
+                    <div class="song-info">
+                        <h4 class="song-headings">Rendered Audio: </h4>
+                    </div>
+
+                    {% if song['rendered'] == '' %}
+                        <h3> &nbsp; No audio rendered yet</h3>
+                    {% else %}
+                        <audio controls class="song-preview">
+                            <source src="{{ url_for('static', filename='audios/rendered/' + song['rendered']) }}"
+                                    type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    {% endif %}
+
+                </div>
+
+                <div>
+                    <div class="icon-container">
+                        <img style="width: 1.6rem; height: 1.6rem; cursor: pointer; margin-right: 1.2rem"
+                             src="{{ url_for('static', filename='img/icons/equalizer.svg') }}" alt="Logo"
+                             onclick="location.href='{{ url_for('user_actions.studio', music_id=song['music_id']) }}'">
+                        <span class="tooltip">Open in Studio</span>
+                    </div>
+                    <div class="icon-container">
+                        <img style="width: 1.6rem; height: 1.6rem; cursor: pointer;"
+                             src="{{ url_for('static', filename='img/icons/trash.svg') }}" alt="Logo"
+                             onclick="confirmDelete({{ song['music_id'] }})">
+                        <span class="tooltip">Delete</span>
+                    </div>
+                </div>
+
+            </div>
+        {% endfor %}
+    </main>
+</div>
+
+</body>
+
+<script src="{{ url_for('static', filename='scripts/login_logout.js') }}"></script>
+<script>
+    function confirmDelete(musicId) {
+        if (confirm("Are you sure you want to delete this music? This action cannot be undone.")) {
+            fetch("delete_music", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({music_id: musicId})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Music deleted successfully!");
+                        location.reload(); // Refresh the page after deletion
+                    } else {
+                        alert("Error deleting music: " + data.error);
+                    }
+                })
+                .catch(error => console.error("Error:", error));
+        }
+    }
+
+    function handleMusicSearch() {
+        const query = document.getElementById('search_music').value.toLowerCase()
+        const songs = document.querySelectorAll('.song');
+
+        songs.forEach(song => {
+            const title = song.querySelector('h2')?.innerText.toLowerCase() || '';
+            const artist = song.querySelector('p')?.innerText.toLowerCase() || '';
+
+            const combined = title + ' ' + artist;
+
+            if (combined.includes(query)) {
+                song.style.display = '';
+            } else {
+                song.style.display = 'none';
+            }
+        });
+    }
+
+
+</script>
+
+</html>

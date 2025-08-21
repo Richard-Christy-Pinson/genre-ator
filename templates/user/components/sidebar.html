@@ -1,0 +1,31 @@
+<aside class="sidebar">
+    <ul id="menu">
+        {% if session.username != 'admin' %}
+            <li><a href="/home">Home</a></li>
+            <li><a href="/studio">Studio</a></li>
+            <li><a href="/splitter">Splitter</a></li>
+            {#        <li><a href="/liked">Liked Songs</a></li>#}
+            {#        <li><a href="/playlist">Playlist</a></li>#}
+        {% elif session.username == 'admin' %}
+            <li><a href="/admin_dashboard">Home</a></li>
+            <li><a href="/admin/users_list">Users</a></li>
+            <li><a href="/admin/eq_presets">Eq Presets</a></li>
+        {% endif %}
+    </ul>
+</aside>
+
+
+{# sidebar active page color #}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let currentPath = window.location.pathname; // Get current URL path
+
+        document.querySelectorAll("#menu li").forEach(item => {
+            let link = item.querySelector("a");
+            if (link && link.getAttribute("href") === currentPath) {
+                item.classList.add("active"); // Apply 'active' to the correct item
+            }
+        });
+    });
+</script>
